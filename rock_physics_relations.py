@@ -79,6 +79,12 @@ def rhob_gardner_lst(vp_data, a = 1.36,  b = 0.386):
 
     return rhob_gardner
 
+def rhob_gardner_lst2(vp_data, a = 1.5,  b = 0.225):
+
+    rhob_gardner = a * np.power(vp_data / 1000, b)
+
+    return rhob_gardner
+
 def rhob_gardner_dolomite(vp_data, a = 1.74,  b = 0.252):
     rhob_gardner = a * np.power(vp_data / 1000, b)
     return rhob_gardner

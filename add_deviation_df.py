@@ -4,10 +4,10 @@ import pandas as pd
 
 from geojo.las_handling import load_las
 
-def import_deviation(df, wd, kb, deviation = "deviated", dev_format = "txt", dev_path = None, dev_file = None):
+def import_deviation(df, wd, kb, deviation = "deviated", dev_format = "txt", dev_path = None, dev_file = None, encoding = "utf-16"):
 
     if deviation == "vertical":
-        df["TVDKB"] = df["MDKB"]
+        df["TVDKB"] = df.index
         df["TVDSS"] = df["TVDKB"] - kb
         df["TVDML"] = df["TVDKB"] - wd
 
@@ -15,13 +15,14 @@ def import_deviation(df, wd, kb, deviation = "deviated", dev_format = "txt", dev
     elif deviation == "deviated":
 
         if dev_format == "las":
-            out, df["TVDKB"] = dev_las(dev_path, dev_file, df)
+            out = dev_las(dev_path, dev_file, df)
 
         elif dev_format == "txt":
-            out, df["TVDKB"] = dev_txt(dev_path, dev_file, df)
+            out = dev_txt(dev_path, dev_file, df, encoding = encoding)
         else:
             print("build me!")
 
+        df["TVDKB"] = list(out["TVDKB"])
         df["TVDSS"] = df["TVDKB"] - kb
         df["TVDml"] = df["TVDSS"] - wd
 
@@ -39,23 +40,23 @@ def dev_las(dev_path, dev_file, data_df, mdkb = "DEPTH", tvdkb = "TVD"):
 
     f = interp1d(dev[mdkb], dev[tvdkb], kind = "cubic", fill_value = "extrapolate", assume_sorted=True)
     out = pd.DataFrame()
-    out["MDKB"] = data_df["MDKB"]
-    out["TVDKB"] = f(out["MDKB"])
+    out["MDKB"] = data_df.index
+    out["TVDKB"] = f(data_df.index)
     # print (dev)
 
     return out, out["TVDKB"]
 
-def dev_txt(dev_path, dev_file, data_df, mdkb = "MD", tvdkb = "TVD", wd = 0, kb = 0):
-    dev = pd.read_csv(dev_path + "\\" + dev_file, delim_whitespace = True, skiprows = 0, header = 0 ,encoding = "utf-16")
+def dev_txt(dev_path, dev_file, data_df, mdkb = "MD", tvdkb = "TVD", wd = 0, kb = 0, encoding = "utf-16"):
+    dev = pd.read_csv(dev_path + "\\" + dev_file, delim_whitespace = True, skiprows = 0, header = 0 ,encoding = encoding)
     # print (dev)
-    dev = dev.loc[(dev[mdkb] >= wd + kb)]
+    #dev = dev.loc[(dev[mdkb] >= wd + kb)]
     f = interp1d(dev[mdkb], dev[tvdkb], kind = "cubic", fill_value = "extrapolate", assume_sorted=True)
 
     out = pd.DataFrame()
-    out["MDKB"] = data_df["MDKB"]
+    out["MDKB"] = data_df.index
     out["TVDKB"] = f(out["MDKB"])
 
-    return out, out["TVDKB"]
+    return out
 
 ## adding TWT conversion to dataframe of well data from cs/well tie
 def geoview_cs_las(cs_path, cs_file, data_df, mdkb = "DEPTH", vint = "DPTM"):

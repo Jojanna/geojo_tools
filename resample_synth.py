@@ -50,9 +50,12 @@ def resample_synth(df, syn_list, log_list, depth="MDKB", twt="TWT", output_sampl
     import pandas as pd
     from scipy.interpolate import interp1d
     from scipy.signal import resample
+    # check the mod stuff - may not work
+    mod = (output_end - output_start) % output_sample_int
 
-    nsamp_out = int((output_end - output_start) / output_sample_int)
-    df = df.loc[df[twt] <=output_end]
+
+    nsamp_out = int((output_end - output_start - mod) / output_sample_int)
+    df = df.loc[df[twt] <=output_end-mod]
     print("nsamp = %f" % nsamp_out)
 
     df_resamp = pd.DataFrame()
@@ -64,11 +67,14 @@ def resample_synth(df, syn_list, log_list, depth="MDKB", twt="TWT", output_sampl
         df_resamp[trace], df_resamp[twt] = resample(x[:-1], nsamp_out, t=t[:-1])  # resample trace
 
     f = interp1d(df[twt], df[depth], kind="linear", fill_value="extrapolate", assume_sorted=True)
+
     df_resamp[depth] = f(df_resamp[twt])
 
 
     for log in log_list:
-        f = interp1d(df[twt], df[log], kind="linear", fill_value="extrapolate", assume_sorted=True)
+        #fill_value = (float(df[log][0]), float(df[log][-1]))
+        fill_value = (0, 0)
+        f = interp1d(df[twt], df[log], kind="linear", fill_value=fill_value, assume_sorted=True)
         df_resamp[log] = f(df_resamp[twt])
 
 
@@ -106,25 +112,52 @@ def resample_data(df, syn_list, log_list, depth="MDKB", twt="TWT", output_sample
 """
 
 def resample_volume(sgy, nmodel, nangles, dt_in, dt_out, twt_in = None):
+
     from scipy.signal import resample
-    nsamp_in = len(sgy[0, 0, 0, :])
-    print("No. samples in: %f" % nsamp_in)
-    nsamp_out = int(nsamp_in / (dt_out / dt_in))
-    print("No. samples out: %f" %(nsamp_in / (dt_out / dt_in)))
+    import numpy as np
+    nsamp_in = int(len(sgy[0, 0, 0, :]))
+
+    mod = nsamp_in % (dt_out / dt_in)
+    print (mod)
+    print("No. samples in: %i" % nsamp_in)
+
+    nsamp_out = int((nsamp_in-mod) / (dt_out / dt_in))
+
+    print("No. samples out: %i" % nsamp_out)
     print("Sample reduction factor (dt_out/dt_in): %f" % (dt_out / dt_in))
     sgy_out = np.ndarray(shape=(1, len(sgy[0, :, 0, 0]), len(sgy[0, 0, :, 0]), nsamp_out))
+    #print (np.shape(sgy))
+    if mod != 0:
+        sgy = sgy[:, :, :, :-int(mod)]
+        twt_in = twt_in[:-int(mod)]
+    #print(np.shape(sgy))
     for i in range(nmodel):
-        for j in range(nangles):
-            if twt_in != None:
-                syn_resamp, twt_out = resample(sgy[0, i, j, :], num=nsamp_out, t = twt_in)
-                sgy_out[0, i, j, :] = syn_resamp
+        if nangles == 1:
+            syn_resamp, twt_out = resample(sgy[0, i, 0, :], num=nsamp_out, t=twt_in)
+            sgy_out[0, i, 0, :] = syn_resamp
 
-            else:
+        else:
+            for j in range(nangles):
+                #print (j)
+                if twt_in != None:
+                    #max_amp = max(sgy[0, i, j, :])
+                    #min_amp = min(sgy[0, i, j, :])
+                    syn_resamp, twt_out = resample(sgy[0, i, j, :], num=nsamp_out, t = twt_in)
+                    #print (np.shape(syn_resamp))
+                    #syn_resamp[~np.isfinite(syn_resamp)] = 0
+                    #syn_resamp[syn_resamp == np.inf] = 0
+                    #syn_resamp[syn_resamp == np.NINF] = 0
 
-                syn_resamp = resample(sgy[0, i, j, :], num=nsamp_out)
-                sgy_out[0, i, j, :] = syn_resamp
-                twt_out = None
+                    sgy_out[0, i, j, :] = syn_resamp
 
+
+                else:
+
+                    syn_resamp = resample(sgy[0, i, j, :], num=nsamp_out)
+                    #syn_resamp[~np.isfinite(syn_resamp)] = 0
+                    sgy_out[0, i, j, :] = syn_resamp
+                    twt_out = None
+    print (np.inf in sgy_out.flatten())
     if twt_out is None:
         return sgy_out
     else:

@@ -26,15 +26,15 @@ def import_tdr(df, time_depth = "checkshot", table_format = "ascii_3col", start_
 
     elif time_depth == "checkshot":
         if table_format == "geoview_txt":
-            cs, df["TWT"], single["VInt"] = geoview_cs_txt(cs_path, cs_file, single)
+            cs, df["TWT"], df["VInt"] = geoview_cs_txt(cs_path, cs_file, df, start_time)
         elif table_format == "las":
-            cs, df["TWT"], single["VInt"] = geoview_cs_las(cs_path, cs_file, single)
+            cs, df["TWT"], df["VInt"] = geoview_cs_las(cs_path, cs_file, df)
         elif table_format == "dug_vint_txt":
-            cs, df["TWT"], single["VInt"] = dug_vint_txt(cs_path, cs_file, single)
+            cs, df["TWT"], df["VInt"] = dug_vint_txt(cs_path, cs_file, df)
         elif table_format == "ascii_3col":
-            cs, df["TWT"], single["VInt"] = ascii_3col(cs_path, cs_file, single)
+            cs, df["TWT"], df["VInt"] = ascii_3col(cs_path, cs_file, df)
         elif table_format == "ascii_3col_trace":
-            cs, df["TWT"], single["VInt"] = ascii_3col_trace(cs_path, cs_file, single)
+            cs, df["TWT"], df["VInt"] = ascii_3col_trace(cs_path, cs_file, df)
 
         else:
             print("build me!")
@@ -49,7 +49,7 @@ def import_tdr(df, time_depth = "checkshot", table_format = "ascii_3col", start_
 
 
 
-def geoview_cs_txt(cs_path, cs_file, data):
+def geoview_cs_txt(cs_path, cs_file, data, start_time = 0):
     skiprows = 16
     header = None
     cs = pd.read_csv(filepath_or_buffer=cs_path + "\\" + cs_file, delim_whitespace=True, header=header,
@@ -71,7 +71,7 @@ def geoview_cs_txt(cs_path, cs_file, data):
     out["VInt"] = abs(f(out["TVDSS"]))
     out["TWT"] = np.nan
 
-    out["TWT"].iloc[0] = twt_zero_md
+    out["TWT"].iloc[0] = start_time
     for i in range(1, len(out["VInt"]), 1):
         out["TWT"].iloc[i] = (((out["TVDSS"].iloc[i] - out["TVDSS"].iloc[i - 1]) / out["VInt"].iloc[i]) * 2000) + \
                              out["TWT"].iloc[i - 1]
@@ -139,7 +139,7 @@ def acsii_3col_dug(cs_path, cs_file, data):
 def ascii_3col(cs_path, cs_file, data, header=None, skiprows=1):
     cs = pd.read_csv(filepath_or_buffer=cs_path + "\\" + cs_file, delim_whitespace=True, header=header,
                      skiprows=skiprows)
-    cs.columns = ["MDSS", "TVDSS", "TWT"]
+    cs.columns = ["MDKB", "TVDSS", "TWT"]
     cs["VInt"] = np.nan
 
     for i in range(1, len(cs["VInt"]), 1):

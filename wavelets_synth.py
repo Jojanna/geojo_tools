@@ -32,8 +32,6 @@ def import_wavelet(wavelet_type = "statistical", wvlt_export = "dtect", dt = 0.5
 
 # create wavelet
 def ricker(cfreq, phase, dt, wvlt_length):
-    wvlt_length = wvlt_length / 1000
-    dt = dt / 1000
     '''
     Calculate a zero-phase ricker wavelet
 
@@ -43,8 +41,8 @@ def ricker(cfreq, phase, dt, wvlt_length):
 
     cfreq: central frequency of wavelet in Hz
     phase: wavelet phase in degrees
-    dt: sample rate in seconds
-    wvlt_length: length of wavelet in seconds
+    dt: sample rate in ms
+    wvlt_length: length of wavelet in ms
     '''
 
     import numpy as np
@@ -55,8 +53,8 @@ def ricker(cfreq, phase, dt, wvlt_length):
     t_min = -t_max
 
     t = np.arange(t_min, t_max, dt)
-
-    t = np.linspace(-wvlt_length / 2, (wvlt_length - dt) / 2, wvlt_length / dt)
+    t = np.linspace(-int(wvlt_length / 2), int((wvlt_length) / 2), int(wvlt_length / dt)+1)
+    t = t/1000
     wvlt = (1.0 - 2.0 * (np.pi ** 2) * (cfreq ** 2) * (t ** 2)) * np.exp(-(np.pi ** 2) * (cfreq ** 2) * (t ** 2))
 
     if phase != 0:
@@ -151,9 +149,11 @@ def wvlt_dtect(wvlt_path, wvlt_file, dt):
     upper_fill, lower_fill = 0, 0
     # f = interpolate.interp1d(wvlt_df["Time"],wvlt_df["Amp"], kind = "cubic", bounds_error  = False, fill_value = (upper_fill, lower_fill))
     samp_freq = int(wvlt_df["Time"].iloc[1] - wvlt_df["Time"].iloc[0])
+    print ("input sample freq = %f" % samp_freq)
     wvlt_length = (len(wvlt_df.index)) * samp_freq
 
     nsamp = int(wvlt_length / dt)
+    print("output sample freq = %f" % dt)
 
     wvlt, t = signal.resample(wvlt_df["Amp"].tolist(), num=nsamp, t=wvlt_df["Time"].tolist())
 

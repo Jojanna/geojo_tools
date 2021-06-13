@@ -30,6 +30,7 @@ def md_to_twt(md_in, md_log, twt_log):
 
 
 def wedge(wedge_logs, tvdss = "TVDSS", mdkb = "MDKB", twt = "TWT", vp_log = "VP", vs_log = "VS", rhob_log = "RHOB", model_top = None, model_base = None, dz_min = 0, dz_max = 100, dz_step = 10):
+    import sys
 
     thick0 = model_base - model_top
     nmodel = int((dz_max - dz_min) / dz_step + 1)
@@ -41,6 +42,7 @@ def wedge(wedge_logs, tvdss = "TVDSS", mdkb = "MDKB", twt = "TWT", vp_log = "VP"
 
     tmin0 = tvdss_to_twt(model_top, wedge_logs, tvdss = tvdss, twt = twt)
     tmax0 = tvdss_to_twt(model_base, wedge_logs, tvdss = tvdss, twt = twt)
+    print ("TWT min/max: ")
     print (tmin0, tmax0)
 
 
@@ -53,8 +55,10 @@ def wedge(wedge_logs, tvdss = "TVDSS", mdkb = "MDKB", twt = "TWT", vp_log = "VP"
     wedge_logs["Vint"] = np.nan
     wedge_logs["Vint_Wedge"] = np.nan
 
+    ## This Vint wedge bit is dubious and should maybe be avoided...
+
     wedge_logs["TWT_Wedge"].iloc[0] = wedge_logs["TWT"].iloc[0]
-    print (len(wedge_logs[twt]))
+    print ("no. samples: %.0f" % len(wedge_logs[twt]))
     for i in range(1, len(wedge_logs[twt])):
         wedge_logs["Vint"].iloc[i] = (wedge_logs[tvdss].iloc[i] - wedge_logs[tvdss].iloc[i - 1]) / (
                 wedge_logs[twt].iloc[i] - wedge_logs[twt].iloc[i - 1]) * 2000
@@ -88,7 +92,7 @@ def wedge(wedge_logs, tvdss = "TVDSS", mdkb = "MDKB", twt = "TWT", vp_log = "VP"
 
         #z0 = wedge_logs[tvdss]
         z_factor = thick / thick0
-        print (z_factor)
+        #print (z_factor)
         # print (wedge_logs["TVDSS"].max())
         z = ((wedge_logs[tvdss] - zmin0) * z_factor + zmin0).tolist()
         dz = thick - thick0
@@ -97,13 +101,13 @@ def wedge(wedge_logs, tvdss = "TVDSS", mdkb = "MDKB", twt = "TWT", vp_log = "VP"
 
         vp = wedge_logs[vp_log].tolist()
 
-        f = interp1d(z, vp, kind="linear", fill_value="extrapolate", assume_sorted=True)
+        f = interp1d(z, vp, kind="nearest", fill_value="extrapolate", assume_sorted=True)
         wedge_logs["VP_%.0fm" % thick] = f(wedge_logs["TVDSS"].tolist())
         wedge_logs.loc[(wedge_logs[tvdss] < zmin0), "VP_%.0fm" % thick] = wedge_logs.loc[(wedge_logs[tvdss] < zmin0), vp_log]
-        wedge_logs.loc[(wedge_logs[tvdss] > (zmin0 + thick)), "VP_%.0fm" % thick] = np.nan
+        wedge_logs.loc[(wedge_logs[tvdss] >= (zmin0 + thick)), "VP_%.0fm" % thick] = np.nan
 
         wedge_list = wedge_logs["VP_%.0fm" % thick].dropna(how="any").tolist()
-        wedge_list.extend(wedge_logs.loc[(wedge_logs[tvdss] > (zmin0 + thick0)), vp_log].tolist())
+        wedge_list.extend(wedge_logs.loc[(wedge_logs[tvdss] >= (zmin0 + thick0)), vp_log].tolist())
 
         if len(wedge_logs.index) > len(wedge_list):
             tail = [np.nan] * (len(wedge_logs.index) - len(wedge_list))
@@ -115,15 +119,15 @@ def wedge(wedge_logs, tvdss = "TVDSS", mdkb = "MDKB", twt = "TWT", vp_log = "VP"
         vp_list.append("VP_%.0fm" % thick)
 
         vs = wedge_logs[vs_log].tolist()
-        f = interp1d(z, vs, kind="linear", fill_value="extrapolate", assume_sorted=True)
+        f = interp1d(z, vs, kind="nearest", fill_value="extrapolate", assume_sorted=True)
         wedge_logs["VS_%.0fm" % thick] = f(wedge_logs["TVDSS"])
         wedge_logs.loc[(wedge_logs[tvdss] < zmin0), "VS_%.0fm" % thick] = wedge_logs.loc[
             wedge_logs[tvdss] < zmin0, vs_log]
 
-        wedge_logs.loc[wedge_logs[tvdss] > (zmin0 + thick), "VS_%.0fm" % thick] = np.nan
+        wedge_logs.loc[wedge_logs[tvdss] >= (zmin0 + thick), "VS_%.0fm" % thick] = np.nan
 
         wedge_list = wedge_logs["VS_%.0fm" % thick].dropna(how="any").tolist()
-        wedge_list.extend(wedge_logs.loc[wedge_logs[tvdss] > (zmin0 + thick0), vs_log].tolist())
+        wedge_list.extend(wedge_logs.loc[wedge_logs[tvdss] >= (zmin0 + thick0), vs_log].tolist())
 
         if len(wedge_logs.index) > len(wedge_list):
             tail = [np.nan] * (len(wedge_logs.index) - len(wedge_list))
@@ -134,14 +138,14 @@ def wedge(wedge_logs, tvdss = "TVDSS", mdkb = "MDKB", twt = "TWT", vp_log = "VP"
 
         rho = wedge_logs[rhob_log].tolist()
 
-        f = interp1d(z, rho, kind="linear", fill_value="extrapolate", assume_sorted=True)
+        f = interp1d(z, rho, kind="nearest", fill_value="extrapolate", assume_sorted=True)
         wedge_logs["RHOB_%.0fm" % thick] = f(wedge_logs["TVDSS"])
         wedge_logs.loc[wedge_logs[tvdss] < zmin0, "RHOB_%.0fm" % thick] = wedge_logs.loc[
             wedge_logs[tvdss] < zmin0, rhob_log]
-        wedge_logs.loc[wedge_logs[tvdss] > (zmin0 + thick), "RHOB_%.0fm" % thick] = np.nan
+        wedge_logs.loc[wedge_logs[tvdss] >=(zmin0 + thick), "RHOB_%.0fm" % thick] = np.nan
         wedge_list = wedge_logs["RHOB_%.0fm" % thick].dropna(how="any").tolist()
         # print (min(wedge_list))
-        wedge_list.extend(wedge_logs.loc[wedge_logs[tvdss] > (zmin0 + thick0), rhob_log].tolist())
+        wedge_list.extend(wedge_logs.loc[wedge_logs[tvdss] >= (zmin0 + thick0), rhob_log].tolist())
 
         if len(wedge_logs.index) > len(wedge_list):
             tail = [np.nan] * (len(wedge_logs.index) - len(wedge_list))
@@ -152,6 +156,358 @@ def wedge(wedge_logs, tvdss = "TVDSS", mdkb = "MDKB", twt = "TWT", vp_log = "VP"
         i = i + 1
 
     return wedge_logs
+
+
+def wedge(wedge_logs, tvdss = "TVDSS", mdkb = "MDKB", twt = "TWT", vp_log = "VP", vs_log = "VS", rhob_log = "RHOB", model_top = None, model_base = None, dz_min = 0, dz_max = 100, dz_step = 10):
+    import sys
+
+    thick0 = model_base - model_top
+    nmodel = int((dz_max - dz_min) / dz_step + 1)
+    thickness = np.linspace(dz_min, dz_max, nmodel)
+
+    zmin0 = model_top
+    zmax0 = model_base
+
+
+    tmin0 = tvdss_to_twt(model_top, wedge_logs, tvdss = tvdss, twt = twt)
+    tmax0 = tvdss_to_twt(model_base, wedge_logs, tvdss = tvdss, twt = twt)
+    print ("TWT min/max: ")
+    print (tmin0, tmax0)
+
+
+
+    # create time-depth conversion for wedge. Uses mean velocity within wedge section
+
+    vint_wedge = (zmax0 - zmin0) / (tmax0 - tmin0) * 2000
+
+    wedge_logs["TWT_Wedge"] = np.nan
+    wedge_logs["Vint"] = np.nan
+    wedge_logs["Vint_Wedge"] = np.nan
+
+    ## This Vint wedge bit is dubious and should maybe be avoided...
+
+    wedge_logs["TWT_Wedge"].iloc[0] = wedge_logs["TWT"].iloc[0]
+    print ("no. samples: %.0f" % len(wedge_logs[twt]))
+    for i in range(1, len(wedge_logs[twt])):
+        wedge_logs["Vint"].iloc[i] = (wedge_logs[tvdss].iloc[i] - wedge_logs[tvdss].iloc[i - 1]) / (
+                wedge_logs[twt].iloc[i] - wedge_logs[twt].iloc[i - 1]) * 2000
+
+        if wedge_logs[twt].iloc[i] <= tmin0:
+            wedge_logs["TWT_Wedge"].iloc[i] = wedge_logs[twt].iloc[i]
+        else:
+            wedge_logs["TWT_Wedge"].iloc[i] = wedge_logs["TWT_Wedge"].iloc[i - 1] + (
+                    wedge_logs[tvdss].iloc[i] - wedge_logs[tvdss].iloc[i - 1]) / vint_wedge * 2000
+        #print("check3")
+        wedge_logs["Vint_Wedge"].iloc[i] = (wedge_logs[tvdss].iloc[i] - wedge_logs[tvdss].iloc[i - 1]) / (
+                wedge_logs["TWT_Wedge"].iloc[i] - wedge_logs["TWT_Wedge"].iloc[i - 1]) * 2000
+    wedge_logs["Vint"].iloc[0] = wedge_logs["Vint"].iloc[1]
+    wedge_logs["Vint_Wedge"].iloc[0] = wedge_logs["Vint_Wedge"].iloc[1]
+
+    # create wedge logs
+
+    # logs lists - retaining a list of column labels
+    vp_list = []
+    vs_list = []
+    rhob_list = []
+
+    i = 0
+    for thick in thickness:
+
+        if thick == 0:
+            thick = thick + 0.1
+        elif thick < 0:
+            print("Warning! Negative Thickness!")
+            sys.exit()
+
+        #z0 = wedge_logs[tvdss]
+        z_factor = thick / thick0
+        #print (z_factor)
+        # print (wedge_logs["TVDSS"].max())
+        z = ((wedge_logs[tvdss] - zmin0) * z_factor + zmin0).tolist()
+        dz = thick - thick0
+        # print (thick)
+        # print (max(z))
+
+        vp = wedge_logs[vp_log].tolist()
+
+        f = interp1d(z, vp, kind="nearest", fill_value="extrapolate", assume_sorted=True)
+        wedge_logs["VP_%.0fm" % thick] = f(wedge_logs["TVDSS"].tolist())
+        wedge_logs.loc[(wedge_logs[tvdss] < zmin0), "VP_%.0fm" % thick] = wedge_logs.loc[(wedge_logs[tvdss] < zmin0), vp_log]
+        wedge_logs.loc[(wedge_logs[tvdss] >= (zmin0 + thick)), "VP_%.0fm" % thick] = np.nan
+
+        wedge_list = wedge_logs["VP_%.0fm" % thick].dropna(how="any").tolist()
+        wedge_list.extend(wedge_logs.loc[(wedge_logs[tvdss] >= zmax0), vp_log].tolist()) # (zmin0 + thick0)
+
+        if len(wedge_logs.index) > len(wedge_list):
+            tail = [np.nan] * (len(wedge_logs.index) - len(wedge_list))
+            wedge_list.extend(tail)
+
+        x = len(wedge_logs.index)
+        wedge_logs["VP_%.0fm" % thick] = wedge_list[0:x]
+
+        vp_list.append("VP_%.0fm" % thick)
+
+        vs = wedge_logs[vs_log].tolist()
+        f = interp1d(z, vs, kind="nearest", fill_value="extrapolate", assume_sorted=True)
+        wedge_logs["VS_%.0fm" % thick] = f(wedge_logs["TVDSS"])
+        wedge_logs.loc[(wedge_logs[tvdss] < zmin0), "VS_%.0fm" % thick] = wedge_logs.loc[
+            wedge_logs[tvdss] < zmin0, vs_log]
+
+        wedge_logs.loc[wedge_logs[tvdss] >= (zmin0 + thick), "VS_%.0fm" % thick] = np.nan
+
+        wedge_list = wedge_logs["VS_%.0fm" % thick].dropna(how="any").tolist()
+        wedge_list.extend(wedge_logs.loc[wedge_logs[tvdss] >= zmax0, vs_log].tolist()) #(zmin0 + thick0)
+
+        if len(wedge_logs.index) > len(wedge_list):
+            tail = [np.nan] * (len(wedge_logs.index) - len(wedge_list))
+            wedge_list.extend(tail)
+        wedge_logs["VS_%.0fm" % thick] = wedge_list[0:x]
+
+        vs_list.append("VS_%.0fm" % thick)
+
+        rho = wedge_logs[rhob_log].tolist()
+
+        f = interp1d(z, rho, kind="nearest", fill_value="extrapolate", assume_sorted=True)
+        wedge_logs["RHOB_%.0fm" % thick] = f(wedge_logs["TVDSS"])
+        wedge_logs.loc[wedge_logs[tvdss] < zmin0, "RHOB_%.0fm" % thick] = wedge_logs.loc[
+            wedge_logs[tvdss] < zmin0, rhob_log]
+        wedge_logs.loc[wedge_logs[tvdss] >=(zmin0 + thick), "RHOB_%.0fm" % thick] = np.nan
+        wedge_list = wedge_logs["RHOB_%.0fm" % thick].dropna(how="any").tolist()
+        # print (min(wedge_list))
+        wedge_list.extend(wedge_logs.loc[wedge_logs[tvdss] >= zmax0, rhob_log].tolist()) #(zmin0 + thick0)
+
+        if len(wedge_logs.index) > len(wedge_list):
+            tail = [np.nan] * (len(wedge_logs.index) - len(wedge_list))
+            wedge_list.extend(tail)
+        wedge_logs["RHOB_%.0fm" % thick] = wedge_list[0:x]
+
+        rhob_list.append("RHOB_%.0fm" % thick)
+        i = i + 1
+
+    return wedge_logs
+
+def wedge_build_in_twt(wedge_logs, tvdss = "TVDSS", mdkb = "MDKB", twt = "TWT", vp_log = "VP", vs_log = "VS", rhob_log = "RHOB", model_top = None, model_base = None, dz_min = 0, dz_max = 100, dz_step = 10):
+
+    # This isn't working
+    import sys
+
+    thick0 = model_base - model_top
+    nmodel = int((dz_max - dz_min) / dz_step + 1)
+    thickness = np.linspace(dz_min, dz_max, nmodel)
+
+    zmin0 = model_top
+    zmax0 = model_base
+
+
+    tmin0 = tvdss_to_twt(model_top, wedge_logs, tvdss = tvdss, twt = twt)
+    tmax0 = tvdss_to_twt(model_base, wedge_logs, tvdss = tvdss, twt = twt)
+    print ("TWT min/max: ")
+    print (tmin0, tmax0)
+
+
+
+    # create time-depth conversion for wedge. Uses mean velocity within wedge section
+
+    vint_wedge = (zmax0 - zmin0) / (tmax0 - tmin0) * 2000
+
+    wedge_logs["TWT_Wedge"] = np.nan
+    wedge_logs["Vint"] = np.nan
+    wedge_logs["Vint_Wedge"] = np.nan
+
+    ## This Vint wedge bit is dubious and should maybe be avoided...
+
+    wedge_logs["TWT_Wedge"].iloc[0] = wedge_logs["TWT"].iloc[0]
+    print ("no. samples: %.0f" % len(wedge_logs[twt]))
+    for i in range(1, len(wedge_logs[twt])):
+        wedge_logs["Vint"].iloc[i] = (wedge_logs[tvdss].iloc[i] - wedge_logs[tvdss].iloc[i - 1]) / (
+                wedge_logs[twt].iloc[i] - wedge_logs[twt].iloc[i - 1]) * 2000
+
+    # create wedge logs
+
+    # logs lists - retaining a list of column labels
+    vp_list = []
+    vs_list = []
+    rhob_list = []
+
+    i = 0
+    for thick in thickness:
+
+        if thick == 0:
+            thick = thick + 0.1
+        elif thick < 0:
+            print("Warning! Negative Thickness!")
+            sys.exit()
+
+        #z0 = wedge_logs[tvdss]
+        z_factor = thick / thick0
+        #print (z_factor)
+        # print (wedge_logs["TVDSS"].max())
+        z = ((wedge_logs[tvdss] - zmin0) * z_factor + zmin0).tolist()
+        dz = thick - thick0
+        # print (thick)
+        # print (max(z))
+        thick_twt = (thick/vint_wedge)*2000
+        #print (thick_twt)
+        #t = ((wedge_logs[twt] - tmin0) * z_factor + tmin0).tolist()
+        t = z/vint_wedge * 2000
+
+        vint_log = wedge_logs["Vint_Wedge"].tolist()
+
+        for log, log_str, log_list in zip([vp_log, vs_log, rhob_log],["VP", "VS", "RHOB"], [vp_list, vs_list, rhob_list]):
+
+            log_ini = wedge_logs[log_str].tolist()
+
+            f = interp1d(t, log_ini, kind="nearest", fill_value="extrapolate", assume_sorted=True)
+            wedge_logs[log_str + "_%.0fm" % thick] = f(wedge_logs["TWT"].tolist())
+            wedge_logs.loc[(wedge_logs[twt] < tmin0), log_str + "_%.0fm" % thick] = wedge_logs.loc[(wedge_logs[twt] < tmin0), log_str]
+            wedge_logs.loc[(wedge_logs[twt] >= (tmin0 + thick_twt)), log_str + "_%.0fm" % thick] = np.nan
+
+            wedge_list = wedge_logs[log_str + "_%.0fm" % thick].dropna(how="any").tolist()
+            wedge_list.extend(wedge_logs.loc[(wedge_logs[twt] >= (tmax0)), log_str].tolist()) #??? tmax0 vs (zmin0 + thick0)??
+
+            if len(wedge_logs.index) > len(wedge_list):
+                tail = [np.nan] * (len(wedge_logs.index) - len(wedge_list))
+                wedge_list.extend(tail)
+
+            x = len(wedge_logs.index)
+            wedge_logs[log_str + "_%.0fm" % thick] = wedge_list[0:x]
+
+            log_list.append(log_str + "_%.0fm" % thick)
+
+        i = i + 1
+
+    return wedge_logs
+
+
+def wedge_vint(wedge_logs, tvdss="TVDSS", mdkb="MDKB", twt="TWT", vp_log="VP", vs_log="VS", rhob_log="RHOB",
+                       model_top=None, model_base=None, dz_min=0, dz_max=100, dz_step=10):
+    #make sure input logs are regularly sampled in TVDSS
+
+    #test - checking for rgular sampling
+    wedge_logs["dz"] = np.nan
+    for i in range(1, len(wedge_logs[tvdss])):
+        z1 = wedge_logs[tvdss].iloc[i - 1]
+        z2 = wedge_logs[tvdss].iloc[i]
+        wedge_logs["dz"].iloc[i] = (z2 - z1)
+
+    wedge_logs["dz"].iloc[0] = wedge_logs["dz"].iloc[1]
+
+    for i in range(1, len(wedge_logs[tvdss])):
+        #print(wedge_logs["dz"].iloc[i].round(3), np.round(wedge_logs["dz"].mean(), 3))
+        if wedge_logs["dz"].iloc[i].round(3) != np.round(wedge_logs["dz"].mean(), 3):
+            import sys
+            print ("irregular TVDSS sampling!")
+            print (wedge_logs["dz"].iloc[i], wedge_logs["dz"].mean())
+            sys.exit()
+
+
+    import sys
+
+    thick0 = model_base - model_top
+    nmodel = int((dz_max - dz_min) / dz_step + 1)
+    thickness = np.linspace(dz_min, dz_max, nmodel)
+
+    zmin0 = model_top
+    zmax0 = model_base
+
+    tmin0 = tvdss_to_twt(model_top, wedge_logs, tvdss=tvdss, twt=twt)
+    tmax0 = tvdss_to_twt(model_base, wedge_logs, tvdss=tvdss, twt=twt)
+    print("TWT min/max: ")
+    print(tmin0, tmax0)
+
+
+    wedge_logs["Vint"] = np.nan
+
+    # calculate vint log, stretch/squeeze with vp/vs/rhob logs, then calculate twt at each thickness with this
+    print("no. samples: %.0f" % len(wedge_logs[twt]))
+    for i in range(1, len(wedge_logs[tvdss])):
+        z1 = wedge_logs[tvdss].iloc[i - 1]
+        z2 = wedge_logs[tvdss].iloc[i]
+        t2 = wedge_logs[twt].iloc[i]
+        t1 = wedge_logs[twt].iloc[i - 1]
+        wedge_logs["Vint"].iloc[i] = (z2 - z1) / ((t2 - t1)/2000)
+
+    wedge_logs["Vint"].iloc[0] = wedge_logs["Vint"].iloc[1]
+
+    # create wedge logs
+    #vint_log = wedge_logs["Vint"].tolist()
+    vint_log = "Vint"
+    # logs lists - retaining a list of column labels
+    vp_list = []
+    vs_list = []
+    rhob_list = []
+    vint_list = []
+
+
+    i = 0
+    for thick in thickness:
+
+        if thick == 0:
+            thick = thick + 0.1
+        elif thick < 0:
+            print("Warning! Negative Thickness!")
+            sys.exit()
+
+        z_factor = thick / thick0
+        # this log represents the stretched log
+        z = ((wedge_logs[tvdss] - zmin0) * z_factor + zmin0).tolist()
+        #df_stretch = wedge_logs[[tvdss, vint_log, vp_log, vs_log, rhob_log]].copy()
+        #df_stretch["TVDSS_ss"] = ((df_stretch[tvdss] - zmin0) * z_factor + zmin0).tolist()
+        #df_stretch = df_stretch.loc[(df_stretch[tvdss]> float(df_stretch["TVDSS_ss"].min())) & (df_stretch[tvdss] < float(df_stretch["TVDSS_ss"].max()))].dropna()
+
+        #print(wedge_logs[tvdss].min(), wedge_logs[tvdss].max())
+        #print(df_stretch["TVDSS_ss"].min(), df_stretch["TVDSS_ss"].max())
+        #print(df_stretch[tvdss].min(), df_stretch[tvdss].max())
+
+        #z = df_stretch["TVDSS_ss"].tolist()
+
+        for log, log_str, log_list in zip([vint_log, vp_log, vs_log, rhob_log], ["Vint", "VP", "VS", "RHOB"],
+                                          [vint_list, vp_list, vs_list, rhob_list]):
+
+            log_ini = wedge_logs[log_str].tolist()
+
+            if log_str == "Vint":
+                kind = "linear"
+            else:
+                kind = "nearest"
+
+            fill_value = (log_ini[0], log_ini[-1])
+            #print ("fill value")
+            #print (fill_value)
+            f = interp1d(z, log_ini, kind=kind, fill_value="extrapolate", assume_sorted=True)
+            wedge_logs[log_str + "_%.0fm" % thick] = f(wedge_logs["TVDSS"].tolist())
+            wedge_logs.loc[(wedge_logs[tvdss] < zmin0), log_str + "_%.0fm" % thick] = wedge_logs.loc[
+                (wedge_logs[tvdss] < zmin0), log_str]
+            wedge_logs.loc[(wedge_logs[tvdss] >= (zmin0 + thick)), log_str + "_%.0fm" % thick] = np.nan
+
+            wedge_list = wedge_logs[log_str + "_%.0fm" % thick].dropna(how="any").tolist()
+            wedge_list.extend(wedge_logs.loc[(wedge_logs[tvdss] >= zmax0), log_str].tolist())
+
+            if len(wedge_logs.index) > len(wedge_list):
+                tail = [log_ini[-1]] * (len(wedge_logs.index) - len(wedge_list))
+                wedge_list.extend(tail)
+
+            x = len(wedge_logs.index)
+            wedge_logs[log_str + "_%.0fm" % thick] = wedge_list[0:x]
+
+            log_list.append(log_str + "_%.0fm" % thick)
+
+        wedge_logs["TWT" + "_%.0fm" % thick] = np.nan
+
+        wedge_logs.loc[wedge_logs["TVDSS"] < zmin0, "TWT" + "_%.0fm" % thick] = wedge_logs.loc[
+            wedge_logs["TVDSS"] < zmin0, "TWT"]
+        for i in range(1, len(wedge_logs.index)):
+            t1 = wedge_logs["TWT" + "_%.0fm" % thick].iloc[i-1]
+            z1 = wedge_logs["TVDSS"].iloc[i-1]
+            z2 = wedge_logs["TVDSS"].iloc[i]
+            vint =  wedge_logs["Vint" + "_%.0fm" % thick].iloc[i]
+
+            wedge_logs["TWT" + "_%.0fm" % thick].iloc[i] = (z2-z1)/vint * 2000 + t1
+
+        i = i + 1
+
+    return wedge_logs
+
 
 def zone_tvdss(md_log, tvdss_log, zone):
     f = interp1d(md_log, tvdss_log, kind = "cubic", fill_value = "extrapolate", assume_sorted=True)
@@ -292,7 +648,7 @@ def convert_resamp_wedge_twt(wedge_logs, twt = "TWT", tmin = 0, tmax = 1000, dt 
     #print((tmax - tmin + dt) / dt)
 
     for col in logs_list:
-        f = interp1d(wedge_logs["TWT_Wedge"], wedge_logs[col], kind="linear", fill_value="extrapolate",
+        f = interp1d(wedge_logs["TWT_Wedge"], wedge_logs[col], kind="nearest", fill_value="extrapolate",
                      bounds_error=False)
         wedge_logs_twt[col] = f(wedge_logs_twt["TWT"])
 
@@ -325,7 +681,7 @@ def zoep_wedge(wedge_logs_twt, angles, dz_min = 0, dz_max = 100, dz_step = 10):
         vol_refs[0, n, :, :] = refs
 
 
-def convolve_wedge_volume(vol, nmodel, nangle, wvlt_amp, dt):
+def convolve_wedge_volume(vol, nmodel, nangles, wvlt_amp, dt):
     # print (nmodel, nangle)
     sgy = np.ndarray(shape=(1, len(vol[0, :, 0, 0]), len(vol[0, 0, :, 0]), len(vol[0, 0, 0, :])))
     # print (np.shape(sgy))

@@ -43,3 +43,13 @@ def calc_vp_vs(k, mu, rho):
         vs.append((pow(mu_n / (rho_n * 1000), 0.5)))
         vp.append((pow((mu_n * 4 / 3 + k_n) / (rho_n * 1000), 0.5)))
     return vp, vs
+
+def lmr(vp, vs, rhob):
+    from geojo.moduli import k_mu
+    k, mu = k_mu(vp, vs, rhob)
+    lam = k - 2 / 3 * mu
+    lamrho = lam * rhob
+    murho = mu * rhob
+
+    return (lam, lamrho, murho)
+

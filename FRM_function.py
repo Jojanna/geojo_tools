@@ -1,34 +1,7 @@
-#   Copyright (c) 2017, Joanna L. Wallis
-#   All rights reserved.
-#
-#   Redistribution and use in source and binary forms, with or without
-#   modification, are permitted provided that the following conditions are met:
-#
-#   1. Redistributions of source code must retain the above copyright notice,
-#   this list of conditions and the following disclaimer.
-#
-#   2. Redistributions in binary form must reproduce the above copyright
-#   notice, this list of conditions and the following disclaimer in the
-#   documentation and/or other materials provided with the distribution.
-#
-#   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-#   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-#   TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-#   PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
-#   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-#   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-#   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
-#   OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-#   WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-#   OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
-#   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-' testing the branching...'
-
-
 import numpy as np
 import pandas as pd
-from fluid import batzle_wang
+#from rppy.fluid import batzle_wang
+from geojo.fluid import batzle_wang
 
 
 # calculate density of dry rock
@@ -84,6 +57,9 @@ def fluids_calc(pressure, temp, fl, s, g, api_oil, ratio):
         rho_h, k_h = 0, 0
         exit(0)
 
+    k_brine = k_brine/ np.power(10, 9)
+    k_h = k_h / np.power(10, 6)
+
     return rho_brine, k_brine, rho_h, k_h
 
 # calculate mixed fluid logs
@@ -102,7 +78,7 @@ def reuss_fluids(rho_brine, k_brine, rho_h, k_h, sw_data):
 
 #calculate saturated rock properties
 
-def sat(vp_data, vs_data, rho_data,):
+def sat(vp_data, vs_data, rho_data):
     mu_sat = []
     k_sat = []
 
@@ -182,6 +158,7 @@ def multiple_FRM(phie_data, sw_out, k_ma, kphi_set, rho_dry, pressure_out, temp,
     rho_brine, k_brine, rho_h_out, k_h_out = fluids_calc(pressure_out, temp, fl_out, s, g, api_oil, ratio)
 #k_f_out, rho_f_out = reuss_fluids(rho_brine, k_brine, rho_h_out, k_h_out, sw_out)
 #k_pore_data, k_d_data = dry_rock(phie_data,k_sat,k_f_ini, k_ma)
+
 
 
     k_f_out = list(map(lambda sw_out_n: 1 / (sw_out_n / k_brine + (1 - sw_out_n) / k_h_out), sw_out))

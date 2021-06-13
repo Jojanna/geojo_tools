@@ -34,7 +34,7 @@ def shuey_two(vp1, vp2, vs1, vs2, rho1, rho2):
 
     return r0, g
 
-def shuey_three  :
+def shuey_three (vp1, vp2, vs1, vs2, rho1, rho2):
     vp_mean = ((vp2+vp1)/2)
     vs_mean = ((vs2+vs1)/2)
     rho_mean = ((rho2+rho1)/2)

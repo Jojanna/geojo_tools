@@ -151,7 +151,10 @@ def rc_zoep_trace(vp_log, vs_log, rhob_log, angles):
             rho1 = rhob[j]
             rho2 = rhob[j + 1]
 
-            ref_out = rc_zoep_2layer(vp1, vs1, rho1, vp2, vs2, rho2, theta_deg)
+            if vp1 == 0:
+                ref_out = 0.0
+            else:
+                ref_out = rc_zoep_2layer(vp1, vs1, rho1, vp2, vs2, rho2, theta_deg)
             if type(ref_out) == float:
                 R = (0.0)
             else:

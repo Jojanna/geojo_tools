@@ -22,7 +22,8 @@ def load_las(root, file, null):
     for log in logs:
         logs_df[str(log)] = data[str(log)]
         logs_df[str(log)] = np.where(logs_df[str(log)] == null, np.nan, logs_df[str(log)])
-        logs_df[str(log)] = logs_df[str(log)].interpolate(method="nearest")
+        #logs_df[str(log)] = logs_df[str(log)].interpolate(method="nearest")
+    logs_df.set_index(logs[0], inplace = True)
 
     return logs_df, units_dict
 
